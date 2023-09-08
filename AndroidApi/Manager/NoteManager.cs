@@ -14,9 +14,9 @@ namespace AndroidApi.Manager
             this.Notes = this.context.Notes.ToList();
         }
 		
-		public List<Note> ShowAllNote()
+		public List<Note> ShowAllNote(int idCategory)
 		{
-			return this.Notes;
+			return this.Notes.Where((x)=>x.IDCategory.Equals(idCategory)).ToList();
 		}
 		
 		public void AddNote(string title,string body, int id_category)
@@ -24,14 +24,14 @@ namespace AndroidApi.Manager
 			this.context.Notes.Add(new Note { Title=title,Body=body,IDCategory=id_category});
 			this.context.SaveChanges();
 		}
-		public List<Note> Search(string searchText)
+		public List<Note> Search(string searchText,int idCat)
 		{
 			List<Note> SearchNotes = new List<Note>();
 			if(searchText.Length > 0)
 			{
                 foreach (var item in this.Notes)
                 {
-                    if (item.Title.ToLower().Contains(searchText.ToLower()) || item.Body.ToLower().Contains(searchText.ToLower()))
+                    if (item.IDCategory == idCat &&(item.Title.ToLower().Contains(searchText.ToLower()) || item.Body.ToLower().Contains(searchText.ToLower())))
                     {
                         SearchNotes.Add(item);
                     }
