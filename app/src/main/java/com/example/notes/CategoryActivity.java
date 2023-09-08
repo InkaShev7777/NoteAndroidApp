@@ -1,32 +1,19 @@
 package com.example.notes;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.example.notes.Managers.ApiManager;
-import com.google.android.material.textfield.TextInputEditText;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,14 +21,12 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -50,39 +35,48 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-public class MainActivity extends AppCompatActivity {
-    private ListView noteListView;
+public class CategoryActivity extends AppCompatActivity {
+    private ListView categoryListView;
     private ArrayAdapter<String> adapter;
-    private ArrayList<String> notes;
-    private TextInputEditText searchText;
-    private Button searchBTN;
-    private String IDCat;
+    private ArrayList<String> categoryes;
+    private ArrayList<String> categoryWhisID;
+    private Integer ChID;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        // Отключаем проверку сертификата SSL
+        setContentView(R.layout.activity_category);
+        this.categoryListView = (ListView) findViewById(R.id.categorylist);
+
         try {
             SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, new TrustManager[]{new InsecureTrustManager()}, null);
+            sslContext.init(null, new TrustManager[]{new MainActivity.InsecureTrustManager()}, null);
             HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
         } catch (Exception e) {
             e.printStackTrace();
         }
-        Bundle arguments = getIntent().getExtras();
-        IDCat = arguments.get("IDCategory").toString();
-        Toast.makeText(this,IDCat,Toast.LENGTH_SHORT).show();
-        noteListView = findViewById(R.id.noteListView);
-        this.searchText = (TextInputEditText)findViewById(R.id.textSearch);
-        this.searchBTN = (Button)findViewById(R.id.button);
-        this.searchBTN.setOnClickListener(v->{
-            new HttpGetRequest().execute("https://10.0.2.2:7006/User/SearchNotes?searchtext="+this.searchText.getText()+"&idCate="+IDCat,"GET");
+        categoryes = new ArrayList<>();
+        categoryWhisID = new ArrayList<>();
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, categoryes);
+        categoryListView.setAdapter(adapter);
+        new CategoryActivity.HttpGetRequest().execute("https://10.0.2.2:7006/User/getCat","GET");
+        categoryListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String nameCat = categoryes.get(position);
+                SetIdSelectedCategory(nameCat);
+                Intent intent = new Intent(getBaseContext(), MainActivity.class);
+                intent.putExtra("IDCategory",ChID);
+                startActivity(intent);
+            }
         });
-        notes = new ArrayList<>();
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, notes);
-        noteListView.setAdapter(adapter);
-
-        new HttpGetRequest().execute("https://10.0.2.2:7006/User/GetNotes?idCategory="+IDCat,"GET");
+    }
+    private void SetIdSelectedCategory(String title){
+        for (String i:categoryWhisID){
+            String[] mas = i.split(" ");
+            if(mas[1].equals(title)){
+                ChID = Integer.parseInt(mas[0]);
+            }
+        }
     }
     private class HttpGetRequest extends AsyncTask<String, Void, String> {
         @Override
@@ -126,12 +120,13 @@ public class MainActivity extends AppCompatActivity {
             if (response != null) {
                 try {
                     JSONArray jsonArray = new JSONArray(response);
-                    notes.clear();
+                    categoryes.clear();
                     for (int i = 0; i < jsonArray.length(); i++) {
                         JSONObject jsonObject = jsonArray.getJSONObject(i);
                         String title = jsonObject.getString("title");
-                        String body = jsonObject.getString("body");
-                        notes.add(title + "\n"+body);
+                        String idCat = jsonObject.getString("id");
+                        categoryes.add(title);
+                        categoryWhisID.add(idCat + " " + title);
                     }
                     adapter.notifyDataSetChanged();
                 } catch (JSONException e) {
@@ -142,16 +137,14 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-public static class InsecureTrustManager implements X509TrustManager {
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {}
-
-    @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {}
-    @Override
-    public X509Certificate[] getAcceptedIssuers() {
-        return null;
+    public static class InsecureTrustManager implements X509TrustManager {
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {}
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {}
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            return null;
+        }
     }
-}
-
 }
